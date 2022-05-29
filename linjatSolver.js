@@ -28,6 +28,14 @@ var dotsPositions = mainPuzzle.reduce(function (acc, currRow, rowIndex) {
     });
     return acc;
 }, []);
+var numberPositions = mainPuzzle.reduce(function (acc, currRow, rowIndex) {
+    currRow.forEach(function (currItem, colIndex) {
+        if (parseInt(currItem)) {
+            acc.push([rowIndex, colIndex]);
+        }
+    });
+    return acc;
+}, []);
 var puzzleRows = mainPuzzle.length;
 var puzzleCols = mainPuzzle[0].length;
 var directions = [
@@ -48,13 +56,22 @@ function checkAllDotsAreCovered(puzzle) {
         return puzzle[rowIndex][colIndex] !== ".";
     });
 }
+function checkAllNumberAreCovered(puzzle) {
+    return numberPositions.every(function (_a) {
+        var rowIndex = _a[0], colIndex = _a[1];
+        return isNaN(+puzzle[rowIndex][colIndex]);
+    });
+}
 function linjatSolver(puzzle, positionX, positionY) {
     // handling invalid x values
-    if (checkAllDotsAreCovered(puzzle)) {
+    if (checkAllDotsAreCovered(puzzle) && checkAllNumberAreCovered(puzzle)) {
         console.log(puzzle.map(function (x) { return x.map(function (y) { return y.padEnd(5, " "); }).join(""); }).join("\n"));
         return "FOUND_SOLUTION";
     }
     if (positionX < 0 || positionX >= puzzleRows) {
+        // console.log(
+        //   puzzle.map((x) => x.map((y) => y.padEnd(5, " ")).join("")).join("\n")
+        // );
         return "FAKE_SOLUTION";
     }
     if (positionY < 0 || positionY >= puzzleCols) {
@@ -70,6 +87,7 @@ function linjatSolver(puzzle, positionX, positionY) {
         return linjatSolver(puzzle, positionX, positionY + 1);
     }
     var rodLength = +puzzle[positionX][positionY];
+    puzzle[positionX][positionY] = " ";
     // rivet position
     for (var rivet = 0; rivet < rodLength; rivet++) {
         // direction rod
@@ -77,12 +95,13 @@ function linjatSolver(puzzle, positionX, positionY) {
             var canFill = true;
             var currentDirection = directions[direction];
             var newPuzzle = JSON.parse(JSON.stringify(puzzle));
+            var fillStr = "".concat(positionX, "_").concat(positionY);
             newPuzzle[positionX][positionY] = " ";
             // handling north and south directions
             if (direction > 1) {
-                var startPosition_1 = positionX - rivet;
+                var startPosition_1 = positionX - currentDirection[0] * rivet;
                 var endPostion_1 = startPosition_1 + currentDirection[0] * rodLength;
-                if (startPosition_1 < 0)
+                if (startPosition_1 < 0 || startPosition_1 >= puzzleRows)
                     continue;
                 if (endPostion_1 < 0 || endPostion_1 >= puzzleRows)
                     continue;
@@ -91,13 +110,13 @@ function linjatSolver(puzzle, positionX, positionY) {
                     isNaN(+puzzle[startPosition_1][positionY])) {
                     continue;
                 }
-                var fillStr_1 = "".concat(positionX, "_").concat(positionY);
-                newPuzzle[startPosition_1][positionY] = fillStr_1;
+                newPuzzle[startPosition_1][positionY] = fillStr;
                 for (var iter = 1; iter < rodLength; iter++) {
                     var currPosition = startPosition_1 + currentDirection[0] * iter;
                     if (puzzle[currPosition][positionY] === " " ||
-                        puzzle[currPosition][positionY] === ".") {
-                        newPuzzle[currPosition][positionY] = fillStr_1;
+                        puzzle[currPosition][positionY] === "." ||
+                        currPosition === positionX) {
+                        newPuzzle[currPosition][positionY] = fillStr;
                     }
                     else {
                         canFill = false;
@@ -114,9 +133,9 @@ function linjatSolver(puzzle, positionX, positionY) {
                 continue;
             }
             // handling east and west directions
-            var startPosition = positionY - rivet;
+            var startPosition = positionY - currentDirection[1] * rivet;
             var endPostion = startPosition + currentDirection[1] * rodLength;
-            if (startPosition < 0)
+            if (startPosition < 0 || startPosition >= puzzleCols)
                 continue;
             if (endPostion < 0 || endPostion >= puzzleCols)
                 continue;
@@ -125,7 +144,6 @@ function linjatSolver(puzzle, positionX, positionY) {
                 isNaN(+puzzle[positionX][startPosition])) {
                 continue;
             }
-            var fillStr = "".concat(positionX, "_").concat(positionY);
             newPuzzle[positionX][startPosition] = fillStr;
             for (var iter = 1; iter < rodLength; iter++) {
                 var currPosition = startPosition + currentDirection[1] * iter;
@@ -134,7 +152,8 @@ function linjatSolver(puzzle, positionX, positionY) {
                     break;
                 }
                 if (puzzle[positionX][currPosition] === " " ||
-                    puzzle[positionX][currPosition] === ".") {
+                    puzzle[positionX][currPosition] === "." ||
+                    currPosition === positionY) {
                     newPuzzle[positionX][currPosition] = fillStr;
                 }
                 else {
@@ -151,6 +170,7 @@ function linjatSolver(puzzle, positionX, positionY) {
             }
         }
     }
+    puzzle[positionX][positionY] = "" + rodLength;
     // console.log(puzzle);
     return "NO_SOLUTION"; // no solution found
 }

@@ -38,6 +38,17 @@ const dotsPositions: Array<[number, number]> = mainPuzzle.reduce(
   },
   [] as Array<[number, number]>
 );
+const numberPositions: Array<[number, number]> = mainPuzzle.reduce(
+  (acc: Array<[number, number]>, currRow: Array<string>, rowIndex: number) => {
+    currRow.forEach((currItem: string, colIndex: number) => {
+      if (parseInt(currItem)) {
+        acc.push([rowIndex, colIndex]);
+      }
+    });
+    return acc;
+  },
+  [] as Array<[number, number]>
+);
 const puzzleRows: number = mainPuzzle.length;
 const puzzleCols: number = mainPuzzle[0].length;
 const directions: Array<[number, number]> = [
@@ -52,10 +63,15 @@ const directions: Array<[number, number]> = [
 //   }
 //   console.log("\n");
 // }
-function checkAllDotsAreCovered(puzzle: Array<Array<string>>) {
+function checkAllDotsAreCovered(puzzle: Array<Array<string>>): boolean {
   return dotsPositions.every(
     ([rowIndex, colIndex]: [number, number]) =>
       puzzle[rowIndex][colIndex] !== "."
+  );
+}
+function checkAllNumberAreCovered(puzzle: Array<Array<string>>): boolean {
+  return numberPositions.every(([rowIndex, colIndex]: [number, number]) =>
+    isNaN(+puzzle[rowIndex][colIndex])
   );
 }
 function linjatSolver(
@@ -64,13 +80,16 @@ function linjatSolver(
   positionY: number
 ): string {
   // handling invalid x values
-  if (checkAllDotsAreCovered(puzzle)) {
+  if (checkAllDotsAreCovered(puzzle) && checkAllNumberAreCovered(puzzle)) {
     console.log(
       puzzle.map((x) => x.map((y) => y.padEnd(5, " ")).join("")).join("\n")
     );
     return "FOUND_SOLUTION";
   }
   if (positionX < 0 || positionX >= puzzleRows) {
+    // console.log(
+    //   puzzle.map((x) => x.map((y) => y.padEnd(5, " ")).join("")).join("\n")
+    // );
     return "FAKE_SOLUTION";
   }
   if (positionY < 0 || positionY >= puzzleCols) {
@@ -86,6 +105,7 @@ function linjatSolver(
     return linjatSolver(puzzle, positionX, positionY + 1);
   }
   let rodLength: number = +puzzle[positionX][positionY];
+  puzzle[positionX][positionY] = " ";
   // rivet position
   for (let rivet: number = 0; rivet < rodLength; rivet++) {
     // direction rod
@@ -93,12 +113,13 @@ function linjatSolver(
       let canFill: boolean = true;
       const currentDirection: [number, number] = directions[direction];
       const newPuzzle = JSON.parse(JSON.stringify(puzzle));
+      const fillStr: string = `${positionX}_${positionY}`;
       newPuzzle[positionX][positionY] = " ";
       // handling north and south directions
       if (direction > 1) {
-        const startPosition = positionX - rivet;
+        const startPosition = positionX - currentDirection[0] * rivet;
         const endPostion = startPosition + currentDirection[0] * rodLength;
-        if (startPosition < 0) continue;
+        if (startPosition < 0 || startPosition >= puzzleRows) continue;
         if (endPostion < 0 || endPostion >= puzzleRows) continue;
         if (
           puzzle[startPosition][positionY] !== " " &&
@@ -107,14 +128,14 @@ function linjatSolver(
         ) {
           continue;
         }
-        const fillStr: string = `${positionX}_${positionY}`;
         newPuzzle[startPosition][positionY] = fillStr;
         for (let iter: number = 1; iter < rodLength; iter++) {
           const currPosition: number =
             startPosition + currentDirection[0] * iter;
           if (
             puzzle[currPosition][positionY] === " " ||
-            puzzle[currPosition][positionY] === "."
+            puzzle[currPosition][positionY] === "." ||
+            currPosition === positionX
           ) {
             newPuzzle[currPosition][positionY] = fillStr;
           } else {
@@ -136,9 +157,9 @@ function linjatSolver(
         continue;
       }
       // handling east and west directions
-      const startPosition = positionY - rivet;
+      const startPosition = positionY - currentDirection[1] * rivet;
       const endPostion = startPosition + currentDirection[1] * rodLength;
-      if (startPosition < 0) continue;
+      if (startPosition < 0 || startPosition >= puzzleCols) continue;
       if (endPostion < 0 || endPostion >= puzzleCols) continue;
       if (
         puzzle[positionX][startPosition] !== " " &&
@@ -147,7 +168,6 @@ function linjatSolver(
       ) {
         continue;
       }
-      const fillStr: string = `${positionX}_${positionY}`;
       newPuzzle[positionX][startPosition] = fillStr;
       for (let iter: number = 1; iter < rodLength; iter++) {
         const currPosition: number = startPosition + currentDirection[1] * iter;
@@ -157,7 +177,8 @@ function linjatSolver(
         }
         if (
           puzzle[positionX][currPosition] === " " ||
-          puzzle[positionX][currPosition] === "."
+          puzzle[positionX][currPosition] === "." ||
+          currPosition === positionY
         ) {
           newPuzzle[positionX][currPosition] = fillStr;
         } else {
@@ -174,6 +195,7 @@ function linjatSolver(
       }
     }
   }
+  puzzle[positionX][positionY] = "" + rodLength;
   // console.log(puzzle);
   return "NO_SOLUTION"; // no solution found
 }
